@@ -6,9 +6,41 @@ service Greeter {
 }
 
 message DockerRequest {
-  string action = 1;
+  Action action = 1;
+  string agent_id = 2;
+  oneof payload {
+      PullImageRequest pull_image_request = 3;
+      CreateContainerRequest create_container_request = 4;
+  }
+}
+
+message PullImageRequest {
+  optional string status = 1;
+  optional string progress = 2;
+}
+
+message CreateContainerRequest {
+
 }
 
 message DockerReply {
-  string action = 1;
+  Action action = 1;
+  oneof payload {
+    Container container = 2;
+    Image image = 3;
+  }
+}
+
+message Container {
+  
+}
+
+message Image {
+  string name = 1;
+}
+
+enum Action {
+  UploadStatus = 0;
+  CreateContainer = 1;
+  PullImage = 2;
 }
