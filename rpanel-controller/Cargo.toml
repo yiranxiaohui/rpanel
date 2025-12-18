@@ -1,9 +1,10 @@
 [package]
-name = "rpanel-agent"
+name = "rpanel-controller"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 rpanel-grpc = { path = "../rpanel-grpc"}
 tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread"] }
+tokio-stream = "0.1.17"
 tonic = "0.14.2"

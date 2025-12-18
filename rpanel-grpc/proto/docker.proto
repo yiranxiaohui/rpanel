@@ -1,0 +1,14 @@
+syntax = "proto3";
+package docker;
+
+service Greeter {
+  rpc Exec (stream DockerRequest) returns (stream DockerReply);
+}
+
+message DockerRequest {
+  string action = 1;
+}
+
+message DockerReply {
+  string action = 1;
+}
