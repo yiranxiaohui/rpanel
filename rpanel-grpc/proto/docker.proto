@@ -28,7 +28,12 @@ message DockerReply {
   oneof payload {
     Container container = 2;
     Image image = 3;
+    Agent agent = 4;
   }
+}
+
+message Agent {
+  string id = 1;
 }
 
 message Container {
@@ -41,6 +46,7 @@ message Image {
 
 enum Action {
   UploadStatus = 0;
-  CreateContainer = 1;
-  PullImage = 2;
+  UpLine = 1;
+  CreateContainer = 2;
+  PullImage = 3;
 }

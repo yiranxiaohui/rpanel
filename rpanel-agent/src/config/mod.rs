@@ -1,23 +1,48 @@
+pub mod args;
+
+use std::io::Error;
 use std::fs;
+use std::path::Path;
 use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
+use tracing::info;
+use uuid::Uuid;
 
 #[derive(Deserialize, Debug, Serialize)]
 #[derive(Clone)]
-pub struct Config {
+pub struct Agent {
+    pub id: String,
     pub url: String,
 }
 
-impl Config {
+impl Agent {
 
 }
 
-pub static CONFIG: OnceLock<Config> = OnceLock::new();
+pub static CONFIG: OnceLock<Agent> = OnceLock::new();
 
-pub fn get_config() -> &'static Config {
+pub fn get_config() -> &'static Agent {
     CONFIG.get_or_init(|| {
-        let content = fs::read_to_string("config.toml").expect("读取配置文件失败，请检查配置文件是否存在！");
-        let config: Config = toml::from_str(content.as_str()).expect("读取配置文件失败，请检查配置文件格式是否符合要求！");
+        check_config().expect("config initialized failed");
+        let content = fs::read_to_string("config/agent.toml").expect("config.toml read failed");
+        let config: Agent = toml::from_str(content.as_str()).expect("读取配置文件失败，请检查配置文件格式是否符合要求！");
         config
     })
+}
+
+pub fn set_config(agent: Agent) -> Result<(), Agent> {
+    info!("config = {:?}", agent);
+    CONFIG.set(agent)
+}
+
+fn check_config() -> Result<(), Box<dyn std::error::Error>> {
+    if !Path::new("config/agent.toml").exists() {
+        let config = Agent {
+            id: Uuid::new_v4().to_string(),
+            url: "http://localhost:2375".to_string(),
+        };
+        let content = toml::to_string(&config)?;
+        fs::write("config/agent.toml", content)?;
+    }
+    Ok(())
 }

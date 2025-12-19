@@ -5,7 +5,7 @@ use tokio::sync::{mpsc, OnceCell};
 use tokio::sync::mpsc::{Sender};
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tracing::{error};
-use rpanel_grpc::docker::grpc::{DockerRequest};
+use rpanel_grpc::docker::grpc::{Action, DockerRequest};
 use rpanel_grpc::docker::grpc::greeter_client::GreeterClient;
 use crate::config::get_config;
 use crate::feature::grpc::handle::handle_message;
@@ -31,11 +31,12 @@ impl Grpc {
         // 4. 接收服务端返回
         tokio::spawn(async move {
             while let Some(reply) = inbound.message().await.expect("recv connection error") {
-                handle_message(reply);
+                handle_message(reply).await;
             }
         });
 
-        Grpc { client, tx}
+        let grpc = Grpc { client, tx};
+        grpc
     }
 
     pub async fn send(&self, req: DockerRequest) {

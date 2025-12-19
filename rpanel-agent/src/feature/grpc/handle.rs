@@ -13,12 +13,13 @@ pub async fn handle_message(reply: DockerReply) {
         },
         Action::PullImage => {
             let payload = reply.payload.unwrap();
-            match payload {
-                Payload::Container(_) => {}
-                Payload::Image(image) => {
-                    pull_image(image.name).await.expect("TODO: panic message");
-                }
-            }
+            // match payload {
+            //     Payload::Container(_) => {}
+            //     Payload::Image(image) => {
+            //         pull_image(image.name).await.expect("TODO: panic message");
+            //     }
+            // }
         }
+        _ => {}
     }
 }
