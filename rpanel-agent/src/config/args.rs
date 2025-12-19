@@ -14,9 +14,13 @@ pub struct Args {
     #[arg(long)]
     id: Option<String>,
 
-    /// Docker HTTP服务地址
-    #[arg(long, default_value = "http://localhost:2375")]
-    url: Option<String>,
+    /// Docker服务地址，支持UnixSocket、Http、Https多种方式
+    #[arg(short, long, default_value = "/var/run/docker.sock")]
+    docker: Option<String>,
+
+    /// Docker服务地址，支持UnixSocket、Http、Https多种方式
+    #[arg(short, long, default_value = "http://localhost:5666")]
+    controller: Option<String>,
 
     /// 指定配置文件，如未填写，则会生成默认的配置文件
     #[arg(long, default_value = "config/agent.toml")]
@@ -33,7 +37,8 @@ pub fn load_or_init_config(args: &Args) -> Result<Agent, Box<dyn std::error::Err
     } else {
         Agent {
             id: Uuid::new_v4().to_string(),
-            url: "http://localhost:2375".to_string(),
+            docker: "http://localhost:2375".to_string(),
+            controller: "http://localhost:5666".to_string()
         }
     };
 
@@ -42,12 +47,16 @@ pub fn load_or_init_config(args: &Args) -> Result<Agent, Box<dyn std::error::Err
         config.id = id.clone();
     }
 
-    if let Some(url) = &args.url {
-        config.url = url.clone();
+    if let Some(url) = &args.docker {
+        config.docker = url.clone();
+    }
+
+    if let Some(controller) = &args.controller {
+        config.controller = controller.clone();
     }
 
     // 3. 如果文件不存在，或者被覆盖了，就写回
-    if !path.exists() || args.id.is_some() || args.url.is_some() {
+    if !path.exists() || args.id.is_some() || args.docker.is_some() {
         if let Some(parent) = path.parent() {
             create_dir_all(parent)?;
         }

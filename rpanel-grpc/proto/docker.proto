@@ -8,40 +8,12 @@ service Greeter {
 message DockerRequest {
   Action action = 1;
   string agent_id = 2;
-  oneof payload {
-      PullImageRequest pull_image_request = 3;
-      CreateContainerRequest create_container_request = 4;
-  }
-}
-
-message PullImageRequest {
-  optional string status = 1;
-  optional string progress = 2;
-}
-
-message CreateContainerRequest {
-
+  string payload = 3;
 }
 
 message DockerReply {
   Action action = 1;
-  oneof payload {
-    Container container = 2;
-    Image image = 3;
-    Agent agent = 4;
-  }
-}
-
-message Agent {
-  string id = 1;
-}
-
-message Container {
-  
-}
-
-message Image {
-  string name = 1;
+  string payload = 2;
 }
 
 enum Action {

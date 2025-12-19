@@ -17,7 +17,7 @@ pub struct Grpc {
 
 impl Grpc {
 
-    pub async fn new(mut client: GreeterClient<tonic::transport::Channel>) -> Grpc {
+    pub async fn new(mut client: GreeterClient<tonic::transport::Channel>, id: String) -> Grpc {
         let (tx, rx) = mpsc::channel(8);
         // 1. 把 rx 包装成 Stream
         let outbound = ReceiverStream::new(rx);
@@ -34,7 +34,13 @@ impl Grpc {
                 handle_message(reply).await;
             }
         });
-
+        let mut req = DockerRequest {
+            agent_id: id,
+            payload: "".to_string(),
+            ..Default::default()
+        };
+        req.set_action(Action::UpLine);
+        tx.send(req).await.unwrap();
         let grpc = Grpc { client, tx};
         grpc
     }
@@ -51,11 +57,11 @@ impl Grpc {
 
 pub static GRPC: OnceCell<Grpc> = OnceCell::const_new();
 
-pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn init_grpc() -> Result<(), Box<dyn std::error::Error>> {
     let config = get_config().clone();
-    let client = GreeterClient::connect(config.url).await?;
+    let client = GreeterClient::connect(config.controller).await?;
     GRPC.get_or_init(|| {
-        Grpc::new(client)
+        Grpc::new(client, config.id)
     }).await;
     Ok(())
 }

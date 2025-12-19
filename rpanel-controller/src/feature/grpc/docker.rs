@@ -1,12 +1,18 @@
+use std::collections::HashMap;
+use std::sync::LazyLock;
+use tokio::sync::mpsc::{Sender};
+use tokio::sync::RwLock;
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{Request, Response, Status};
-use rpanel_grpc::docker::grpc::{DockerReply, DockerRequest};
+use tonic::{Request, Response, Status, Streaming};
+use tracing::info;
+use rpanel_grpc::docker::grpc::{Action, DockerReply, DockerRequest};
 use rpanel_grpc::docker::grpc::greeter_server::Greeter;
 
-#[derive(Default)]
-pub struct DockerGreeter {
+static CLIENT_MAP: LazyLock<RwLock<HashMap<String, Sender<Result<DockerReply, Status>>>>>
+    = LazyLock::new(|| RwLock::new(HashMap::new()));
 
-}
+#[derive(Default)]
+pub struct DockerGreeter {}
 
 #[tonic::async_trait]
 impl Greeter for DockerGreeter {
@@ -17,51 +23,28 @@ impl Greeter for DockerGreeter {
         &self,
         request: Request<tonic::Streaming<DockerRequest>>,
     ) -> Result<Response<Self::ExecStream>, Status> {
-        println!("client connected");
-
         // 1. 拿到客户端请求流
-        let mut inbound = request.into_inner();
-
+        let inbound = request.into_inner();
         // 2. 创建一个 channel，用来给客户端回数据
-        let (tx, rx) = tokio::sync::mpsc::channel(16);
-
-        // ===== 1️⃣ 处理客户端输入 =====
-        let tx_input = tx.clone();
-        tokio::spawn(async move {
-            while let Ok(Some(req)) = inbound.message().await {
-                // println!("recv: {:?}", req.action);
-                //
-                // let reply = DockerReply {
-                //     action: format!("server recv action = {}", req.action),
-                // };
-                //
-                // if tx_input.send(Ok(reply)).await.is_err() {
-                //     break;
-                // }
-            }
-
-            println!("client disconnected");
-        });
-        // ===== 2️⃣ 服务端主动推送（心跳 / 状态）=====
-        let tx_push = tx.clone();
-        tokio::spawn(async move {
-            let mut i = 0;
-            loop {
-                // tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                //
-                // let msg = DockerReply {
-                //     action: format!("server heartbeat {}", i),
-                // };
-                //
-                // if tx_push.send(Ok(msg)).await.is_err() {
-                //     println!("client gone, stop push");
-                //     break;
-                // }
-                //
-                // i += 1;
-            }
-        });
-        // 5. 把 rx 包装成 Stream 返回
+        let (tx, rx) = tokio::sync::mpsc::channel::<Result<DockerReply, Status>>(16);
+        tokio::spawn(handle_message(inbound, tx));
+        // 3. 把 rx 包装成 Stream 返回
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
+    }
+}
+
+pub async fn handle_message(mut inbound: Streaming<DockerRequest>, tx: Sender<Result<DockerReply, Status>>) {
+    while let Ok(Some(req)) = inbound.message().await {
+        let action = req.action();
+        match action {
+            Action::UploadStatus => {}
+            Action::UpLine => {
+                let agent_id = req.agent_id;
+                info!("{} client connected", agent_id);
+                CLIENT_MAP.write().await.insert(agent_id, tx.clone());
+            }
+            Action::CreateContainer => {}
+            Action::PullImage => {}
+        }
     }
 }

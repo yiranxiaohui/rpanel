@@ -9,7 +9,7 @@ use crate::feature::grpc::docker::DockerGreeter;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
-    let addr = "[::1]:50051".parse()?;
+    let addr = "[::1]:5666".parse()?;
     let greeter = DockerGreeter::default();
 
     info!("gRPC server listening on {}", addr);

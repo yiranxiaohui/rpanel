@@ -1,6 +1,4 @@
-use rpanel_grpc::docker::grpc::{Action, DockerReply, Image};
-use rpanel_grpc::docker::grpc::docker_reply::Payload;
-use crate::feature::docker::image::pull_image;
+use rpanel_grpc::docker::grpc::{Action, DockerReply};
 
 pub async fn handle_message(reply: DockerReply) {
     let action = reply.action();
@@ -12,7 +10,7 @@ pub async fn handle_message(reply: DockerReply) {
 
         },
         Action::PullImage => {
-            let payload = reply.payload.unwrap();
+            // let payload = reply.payload.unwrap();
             // match payload {
             //     Payload::Container(_) => {}
             //     Payload::Image(image) => {
