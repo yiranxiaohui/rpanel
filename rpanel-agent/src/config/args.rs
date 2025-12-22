@@ -18,7 +18,7 @@ pub struct Args {
     docker: Option<String>,
 
     /// Docker服务地址，支持UnixSocket、Http、Https多种方式
-    #[arg(short, long, default_value = "http://localhost:5666")]
+    #[arg(short, long, default_value = "http://localhost:15666")]
     controller: Option<String>,
 
     /// 指定配置文件，如未填写，则会生成默认的配置文件
@@ -37,7 +37,7 @@ pub fn load_or_init_config(args: &Args) -> Result<Agent, Box<dyn std::error::Err
         Agent {
             id: Uuid::new_v4().to_string(),
             docker: "http://localhost:2375".to_string(),
-            controller: "http://localhost:5666".to_string()
+            controller: "http://localhost:15666".to_string()
         }
     };
 

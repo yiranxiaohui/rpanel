@@ -1,17 +1,15 @@
 use tracing::{error, info, warn};
+use crate::feature::axum::init_axum;
 use crate::feature::database::init_database;
 use crate::feature::grpc::init_grpc;
 
 pub mod grpc;
 pub mod docker;
 mod database;
+mod axum;
 
 pub async fn init_feature() {
-    tokio::spawn(async {
-        info!("grpc task entered");
-        init_grpc().await;
-        info!("grpc task exited");
-        println!("grpc task exited");
-    });
+    tokio::spawn(init_axum());
+    tokio::spawn(init_grpc());
     tokio::spawn(init_database());
 }

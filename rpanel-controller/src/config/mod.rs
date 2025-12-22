@@ -35,7 +35,7 @@ pub fn get_config() -> &'static Controller {
 
 fn check_config() -> Result<(), Box<dyn std::error::Error>> {
     if !Path::new("config/controller.toml").exists() {
-        let config = Controller {port: 5666};
+        let config = Controller {port: 15666};
         let content = toml::to_string(&config)?;
         fs::write("config/controller.toml", content)?;
     }

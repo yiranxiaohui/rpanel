@@ -10,7 +10,7 @@ use crate::config::{set_config, Controller};
 pub struct Args {
 
     /// Controller监听的端口
-    #[arg(short, long, default_value = "5666")]
+    #[arg(short, long, default_value = "15666")]
     port: Option<i16>,
 
     /// 指定配置文件，如未填写，则会生成默认的配置文件
@@ -27,7 +27,7 @@ pub fn init_controller_config(args: &Args) -> Result<Controller, Box<dyn std::er
         toml::from_str(&content)?
     } else {
         Controller {
-            port: 5666,
+            port: 15666,
         }
     };
 

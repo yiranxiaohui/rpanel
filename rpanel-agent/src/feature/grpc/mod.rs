@@ -2,6 +2,7 @@ mod recv;
 mod handle;
 mod status;
 
+use std::time::Duration;
 use tokio::sync::{mpsc, OnceCell};
 use tokio::sync::mpsc::Sender;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
@@ -60,13 +61,18 @@ impl Grpc {
 
 pub static GRPC: OnceCell<Grpc> = OnceCell::const_new();
 
-pub async fn init_grpc() -> Result<(), Box<dyn std::error::Error>> {
-    let config = get_config().clone();
-    let client = GreeterClient::connect(config.controller).await?;
-    GRPC.get_or_init(|| {
-        Grpc::new(client, config.id)
-    }).await;
-    Ok(())
+pub async fn init_grpc() {
+    loop {
+        let config = get_config().clone();
+        if let Ok(client) = GreeterClient::connect(config.controller).await {
+            GRPC.get_or_init(|| {
+                Grpc::new(client, config.id)
+            }).await;
+        } else {
+            tokio::time::sleep(Duration::from_secs(10)).await;
+            error!("gRPC connect failed, reconnecting...");
+        }
+    }
 }
 
 pub async fn get_grpc() -> Option<&'static Grpc> {
