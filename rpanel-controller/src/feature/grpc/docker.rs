@@ -7,6 +7,7 @@ use tonic::{Request, Response, Status, Streaming};
 use tracing::info;
 use rpanel_grpc::docker::grpc::{Action, DockerReply, DockerRequest};
 use rpanel_grpc::docker::grpc::greeter_server::Greeter;
+use crate::feature::grpc::handle::handle_upload_status_message;
 
 static CLIENT_MAP: LazyLock<RwLock<HashMap<String, Sender<Result<DockerReply, Status>>>>>
     = LazyLock::new(|| RwLock::new(HashMap::new()));
@@ -37,7 +38,9 @@ pub async fn handle_message(mut inbound: Streaming<DockerRequest>, tx: Sender<Re
     while let Ok(Some(req)) = inbound.message().await {
         let action = req.action();
         match action {
-            Action::UploadStatus => {}
+            Action::UploadStatus => {
+                handle_upload_status_message(req).await;
+            }
             Action::UpLine => {
                 let agent_id = req.agent_id;
                 info!("{} client connected", agent_id);

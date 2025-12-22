@@ -1,0 +1,9 @@
+[package]
+name = "rpanel-common"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sysinfo = "0.37.2"
+serde_json = "1.0.145"
+serde = { version = "1.0.228", features = ["derive"] }

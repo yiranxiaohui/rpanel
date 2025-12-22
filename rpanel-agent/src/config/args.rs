@@ -2,7 +2,6 @@ use std::fs;
 use std::fs::{create_dir_all};
 use std::path::Path;
 use clap::Parser;
-use tracing::info;
 use uuid::Uuid;
 use crate::config::{set_config, Agent};
 

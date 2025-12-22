@@ -1,14 +1,16 @@
 mod recv;
 mod handle;
+mod status;
 
 use tokio::sync::{mpsc, OnceCell};
-use tokio::sync::mpsc::{Sender};
+use tokio::sync::mpsc::Sender;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
-use tracing::{error};
+use tracing::error;
 use rpanel_grpc::docker::grpc::{Action, DockerRequest};
 use rpanel_grpc::docker::grpc::greeter_client::GreeterClient;
 use crate::config::get_config;
 use crate::feature::grpc::handle::handle_message;
+use crate::feature::grpc::status::upload_status;
 
 pub struct Grpc {
     pub client: GreeterClient<tonic::transport::Channel>,
@@ -41,6 +43,7 @@ impl Grpc {
         };
         req.set_action(Action::UpLine);
         tx.send(req).await.unwrap();
+        tokio::spawn(upload_status());
         let grpc = Grpc { client, tx};
         grpc
     }

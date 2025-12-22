@@ -1,23 +1,21 @@
 mod feature;
 mod config;
 
-use tonic::transport::Server;
-use tracing::info;
-use rpanel_grpc::docker::grpc::greeter_server::GreeterServer;
-use crate::feature::grpc::docker::DockerGreeter;
+use tracing_subscriber::{fmt, EnvFilter};
+use crate::config::init_config;
+use crate::feature::init_feature;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt::init();
-    let addr = "[::1]:5666".parse()?;
-    let greeter = DockerGreeter::default();
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
 
-    info!("gRPC server listening on {}", addr);
-
-    Server::builder()
-        .add_service(GreeterServer::new(greeter))
-        .serve(addr)
-        .await?;
-
+    fmt()
+        .with_env_filter(filter)
+        .init();
+    init_config()?;
+    init_feature().await;
+    // 阻塞主线程，直到 Ctrl+C
+    tokio::signal::ctrl_c().await?;
     Ok(())
 }
