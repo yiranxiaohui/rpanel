@@ -1,4 +1,3 @@
-use tracing::{error, info, warn};
 use crate::feature::axum::init_axum;
 use crate::feature::database::init_database;
 use crate::feature::grpc::init_grpc;

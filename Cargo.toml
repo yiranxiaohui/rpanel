@@ -1,3 +1,8 @@
 [workspace]
+members = [
+    "migration",
+    "rpanel-agent",
+    "rpanel-controller",
+    "rpanel-grpc"
+]
 resolver = "3"
-members = ["rpanel-agent", "rpanel-controller", "rpanel-grpc", "migration"]
