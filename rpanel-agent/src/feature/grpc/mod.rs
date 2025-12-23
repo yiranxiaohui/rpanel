@@ -6,6 +6,7 @@ use std::time::Duration;
 use tokio::sync::{mpsc, OnceCell};
 use tokio::sync::mpsc::Sender;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
+use tonic::transport::{Channel, Error};
 use tracing::error;
 use rpanel_grpc::docker::grpc::{Action, DockerRequest};
 use rpanel_grpc::docker::grpc::greeter_client::GreeterClient;
@@ -64,13 +65,17 @@ pub static GRPC: OnceCell<Grpc> = OnceCell::const_new();
 pub async fn init_grpc() {
     loop {
         let config = get_config().clone();
-        if let Ok(client) = GreeterClient::connect(config.controller).await {
-            GRPC.get_or_init(|| {
-                Grpc::new(client, config.id)
-            }).await;
-        } else {
-            tokio::time::sleep(Duration::from_secs(10)).await;
-            error!("gRPC connect failed, reconnecting...");
+        match GreeterClient::connect(config.controller).await {
+            Ok(client) => {
+                let grpc = Grpc::new(client, config.id).await;
+                if GRPC.set(grpc).is_err() {
+                    error!("init grpc server already set");
+                }
+            }
+            Err(err) => {
+                error!("gRPC connect failed: {}, reconnecting...", err);
+                tokio::time::sleep(Duration::from_secs(10)).await;
+            }
         }
     }
 }
