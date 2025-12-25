@@ -1,5 +1,5 @@
 use bollard::errors::Error;
-use bollard::models::{ContainerCreateBody, ContainerCreateResponse, ContainerSummary};
+use bollard::models::{ContainerCreateBody, ContainerCreateResponse, ContainerSummary, HostConfig, PortBinding};
 use bollard::query_parameters::{
     CreateContainerOptions,
     StartContainerOptions,
@@ -8,6 +8,7 @@ use bollard::query_parameters::{
     ListContainersOptions,
 };
 use tracing::{error, info};
+use std::collections::HashMap;
 
 use crate::feature::docker::get_docker;
 
@@ -16,6 +17,8 @@ use crate::feature::docker::get_docker;
 pub async fn create_container(
     image: String,
     name: String,
+    command: Option<String>,
+    ports: Option<Vec<(String, String)>>,
 ) -> Result<ContainerCreateResponse, Error> {
     let docker = get_docker();
 
@@ -24,8 +27,33 @@ pub async fn create_container(
         ..Default::default()
     });
 
+    let mut host_config = HostConfig::default();
+    let mut exposed_ports = HashMap::new();
+    let mut port_bindings = HashMap::new();
+
+    if let Some(ports_vec) = ports {
+        for (host_port, container_port) in ports_vec {
+             // exposed_ports keys are "80/tcp" etc.
+             // port_bindings keys are "80/tcp", values are list of PortBinding { HostPort: "8080", ... }
+             let key = format!("{}/tcp", container_port); // Assuming TCP for now
+             exposed_ports.insert(key.clone(), HashMap::new());
+             
+             let bindings = vec![PortBinding {
+                 host_ip: None,
+                 host_port: Some(host_port),
+             }];
+             port_bindings.insert(key, Some(bindings));
+        }
+    }
+    host_config.port_bindings = Some(port_bindings);
+
+    let cmd: Option<Vec<String>> = command.map(|c| c.split_whitespace().map(String::from).collect());
+
     let config = ContainerCreateBody {
         image: Some(image),
+        cmd,
+        exposed_ports: Some(exposed_ports),
+        host_config: Some(host_config),
         ..Default::default()
     };
 

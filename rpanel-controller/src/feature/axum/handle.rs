@@ -1,4 +1,4 @@
-use axum::Json;
+use axum::{Json, extract::Path};
 use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use futures::stream::Stream;
@@ -6,9 +6,13 @@ use tokio_stream::StreamExt;
 use sea_orm::{ConnectionTrait, EntityTrait, FromQueryResult};
 use sea_orm::prelude::DateTime;
 use sea_orm::sea_query::{Expr, Query};
+use sea_orm::{ColumnTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-use migration::entity::{t_agent, t_agent_system_status};
-use rpanel_common::docker::PullImageRequest;
+use migration::entity::{t_agent, t_agent_system_status, t_agent_docker_info};
+use rpanel_common::docker::{
+    PullImageRequest, ContainerActionRequest, RemoveContainerRequest, 
+    RemoveImageRequest, RunContainerRequest
+};
 use rpanel_grpc::docker::grpc::{Action, DockerReply};
 use crate::feature::database::get_database;
 use crate::feature::grpc::docker::send_to_agent;
@@ -117,4 +121,91 @@ pub async fn sse_handler() -> Sse<impl Stream<Item = Result<Event, axum::Error>>
     });
 
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+// Docker Handlers
+
+pub async fn get_docker_containers(Path(agent_id): Path<String>) -> Json<Option<String>> {
+    let db = get_database().await;
+    let info = t_agent_docker_info::Entity::find()
+        .filter(t_agent_docker_info::Column::AgentId.eq(&agent_id))
+        .filter(t_agent_docker_info::Column::DataType.eq(1))
+        .one(&db)
+        .await
+        .unwrap_or(None);
+    
+    Json(info.map(|i| i.content))
+}
+
+pub async fn get_docker_images(Path(agent_id): Path<String>) -> Json<Option<String>> {
+    let db = get_database().await;
+    let info = t_agent_docker_info::Entity::find()
+        .filter(t_agent_docker_info::Column::AgentId.eq(&agent_id))
+        .filter(t_agent_docker_info::Column::DataType.eq(2))
+        .one(&db)
+        .await
+        .unwrap_or(None);
+    
+    Json(info.map(|i| i.content))
+}
+
+pub async fn trigger_refresh_docker(Path(agent_id): Path<String>) -> StatusCode {
+    let reply_c = DockerReply {
+        action: Action::ListContainers as i32,
+        payload: "".to_string(),
+    };
+    let reply_i = DockerReply {
+        action: Action::ListImages as i32,
+        payload: "".to_string(),
+    };
+    
+    // We try to send both
+    let sent_c = send_to_agent(&agent_id, reply_c).await;
+    let sent_i = send_to_agent(&agent_id, reply_i).await;
+    
+    if sent_c || sent_i {
+        StatusCode::OK
+    } else {
+        StatusCode::NOT_FOUND
+    }
+}
+
+pub async fn trigger_start_container(Path(agent_id): Path<String>, Json(payload): Json<ContainerActionRequest>) -> StatusCode {
+    let reply = DockerReply {
+        action: Action::StartContainer as i32,
+        payload: serde_json::to_string(&payload).unwrap(),
+    };
+    if send_to_agent(&agent_id, reply).await { StatusCode::OK } else { StatusCode::NOT_FOUND }
+}
+
+pub async fn trigger_stop_container(Path(agent_id): Path<String>, Json(payload): Json<ContainerActionRequest>) -> StatusCode {
+    let reply = DockerReply {
+        action: Action::StopContainer as i32,
+        payload: serde_json::to_string(&payload).unwrap(),
+    };
+    if send_to_agent(&agent_id, reply).await { StatusCode::OK } else { StatusCode::NOT_FOUND }
+}
+
+pub async fn trigger_remove_container(Path(agent_id): Path<String>, Json(payload): Json<RemoveContainerRequest>) -> StatusCode {
+    let reply = DockerReply {
+        action: Action::RemoveContainer as i32,
+        payload: serde_json::to_string(&payload).unwrap(),
+    };
+    if send_to_agent(&agent_id, reply).await { StatusCode::OK } else { StatusCode::NOT_FOUND }
+}
+
+pub async fn trigger_remove_image(Path(agent_id): Path<String>, Json(payload): Json<RemoveImageRequest>) -> StatusCode {
+    let reply = DockerReply {
+        action: Action::RemoveImage as i32,
+        payload: serde_json::to_string(&payload).unwrap(),
+    };
+    if send_to_agent(&agent_id, reply).await { StatusCode::OK } else { StatusCode::NOT_FOUND }
+}
+
+pub async fn trigger_run_container(Path(agent_id): Path<String>, Json(payload): Json<RunContainerRequest>) -> StatusCode {
+    let reply = DockerReply {
+        action: Action::RunContainer as i32,
+        payload: serde_json::to_string(&payload).unwrap(),
+    };
+    if send_to_agent(&agent_id, reply).await { StatusCode::OK } else { StatusCode::NOT_FOUND }
 }

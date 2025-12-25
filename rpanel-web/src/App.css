@@ -302,3 +302,79 @@
     color: #cc8888;
     margin-left: 0.5rem;
 }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: #888;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+  color: #ccc;
+}
+
+.tab.active {
+  color: #646cff;
+  border-bottom-color: #646cff;
+}
+
+/* Data Table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.data-table th, .data-table td {
+  text-align: left;
+  padding: 0.8rem;
+  border-bottom: 1px solid #333;
+}
+
+.data-table th {
+  color: #666;
+  font-weight: 500;
+}
+
+.data-table td {
+  color: #ddd;
+  font-size: 0.9rem;
+}
+
+.data-table tr:hover {
+  background-color: #222;
+}
+
+.action-btn.danger {
+  background-color: #5a2d2d;
+  color: #ffcccc;
+  border-color: #7a3d3d;
+}
+
+.action-btn.danger:hover {
+  background-color: #7a3d3d;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #ccc;
+    font-size: 0.9rem;
+}
+

@@ -22,4 +22,11 @@ enum Action {
   CreateContainer = 2;
   PullImage = 3;
   RegisterAgent = 4;
+  ListContainers = 5;
+  ListImages = 6;
+  StartContainer = 7;
+  StopContainer = 8;
+  RemoveContainer = 9;
+  RemoveImage = 10;
+  RunContainer = 11;
 }

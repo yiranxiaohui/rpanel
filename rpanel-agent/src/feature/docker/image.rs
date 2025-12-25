@@ -2,6 +2,8 @@ use bollard::query_parameters::CreateImageOptions;
 use tonic::codegen::tokio_stream::StreamExt;
 use tonic::Status;
 use tracing::{info, error};
+use bollard::models::ImageSummary;
+use bollard::query_parameters::{ListImagesOptions, RemoveImageOptions};
 use rpanel_common::docker::PullImageProgress;
 use rpanel_grpc::docker::grpc::{Action, DockerRequest};
 use crate::feature::docker::get_docker;
@@ -42,11 +44,28 @@ pub async fn pull_image(image: String) -> Result<(), Status> {
             }
             Err(e) => {
                 error!("Error pulling image {}: {}", image, e);
-                // Optionally send error back to controller?
             }
         }
     }
 
     info!("Image pulled successfully: {}", image);
     Ok(())
+}
+
+pub async fn get_image_list() -> Result<Vec<ImageSummary>, bollard::errors::Error> {
+    let docker = get_docker();
+    let options = Some(ListImagesOptions {
+        all: true,
+        ..Default::default()
+    });
+    docker.list_images(options).await
+}
+
+pub async fn remove_image(image_id: String, force: bool) -> Result<(), bollard::errors::Error> {
+    let docker = get_docker();
+    let options = Some(RemoveImageOptions {
+        force,
+        ..Default::default()
+    });
+    docker.remove_image(&image_id, options, None).await.map(|_| ())
 }

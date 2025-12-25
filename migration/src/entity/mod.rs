@@ -3,4 +3,5 @@
 pub mod prelude;
 
 pub mod t_agent;
+pub mod t_agent_docker_info;
 pub mod t_agent_system_status;

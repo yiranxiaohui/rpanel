@@ -74,6 +74,15 @@ pub async fn handle_message(mut inbound: Streaming<DockerRequest>, tx: Sender<Re
                  });
                  send_event("pull_progress", wrapper.to_string());
             }
+            Action::ListContainers => {
+                 use crate::feature::grpc::handle::handle_docker_info_message;
+                 handle_docker_info_message(req.agent_id, 1, req.payload).await;
+            }
+            Action::ListImages => {
+                 use crate::feature::grpc::handle::handle_docker_info_message;
+                 handle_docker_info_message(req.agent_id, 2, req.payload).await;
+            }
+            _ => {}
         }
     }
 

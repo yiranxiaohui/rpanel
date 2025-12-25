@@ -1,8 +1,8 @@
 use chrono::{Utc};
-use migration::entity::{t_agent, t_agent_system_status};
+use migration::entity::{t_agent, t_agent_system_status, t_agent_docker_info};
 use rpanel_common::status::Status;
 use rpanel_common::agent::AgentRegisterRequest;
-use rpanel_grpc::docker::grpc::DockerRequest;
+use rpanel_grpc::docker::grpc::{DockerRequest};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use migration::OnConflict;
 use crate::feature::database::get_database;
@@ -77,6 +77,37 @@ pub async fn handle_register_agent(docker_request: DockerRequest) {
         }
     }
 }
+
+pub async fn handle_docker_info_message(agent_id: String, type_: i32, payload: String) {
+    let db = get_database().await;
+    
+    let existing = t_agent_docker_info::Entity::find()
+        .filter(t_agent_docker_info::Column::AgentId.eq(&agent_id))
+        .filter(t_agent_docker_info::Column::DataType.eq(type_))
+        .one(&db)
+        .await
+        .unwrap_or(None);
+        
+    match existing {
+        Some(model) => {
+             let mut active: t_agent_docker_info::ActiveModel = model.into();
+             active.content = Set(payload);
+             active.update_time = Set(Utc::now().naive_utc());
+             active.update(&db).await.ok();
+        },
+        None => {
+             let info = t_agent_docker_info::ActiveModel {
+                id: Default::default(),
+                agent_id: Set(agent_id),
+                data_type: Set(type_),
+                content: Set(payload),
+                update_time: Set(Utc::now().naive_utc()),
+            };
+             info.insert(&db).await.ok();
+        }
+    }
+}
+
 
 pub async fn set_agent_online(agent_id: String) {
     let db = get_database().await;
