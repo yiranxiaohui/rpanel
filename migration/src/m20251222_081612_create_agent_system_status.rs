@@ -12,7 +12,7 @@ impl MigrationTrait for Migration {
                     .table(TAgentSystemStatus::Table)
                     .if_not_exists()
                     .col(pk_auto(TAgentSystemStatus::Id))
-                    .col(integer(TAgentSystemStatus::AgentId))
+                    .col(string(TAgentSystemStatus::AgentId))
                     .col(float(TAgentSystemStatus::CpuUsage))
                     .col(big_integer(TAgentSystemStatus::MemUsed))
                     .col(big_integer(TAgentSystemStatus::MemTotal))

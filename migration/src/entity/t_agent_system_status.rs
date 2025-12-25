@@ -9,7 +9,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     #[sea_orm(unique)]
-    pub agent_id: i32,
+    pub agent_id: String,
     #[sea_orm(column_type = "Float")]
     pub cpu_usage: f32,
     pub mem_used: i64,
