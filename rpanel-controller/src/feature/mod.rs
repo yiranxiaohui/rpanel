@@ -4,6 +4,7 @@ use crate::feature::grpc::init_grpc;
 
 pub mod grpc;
 pub mod docker;
+pub mod event;
 mod database;
 mod axum;
 

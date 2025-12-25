@@ -4,13 +4,27 @@ use tokio::sync::mpsc::{Sender};
 use tokio::sync::RwLock;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status, Streaming};
-use tracing::info;
+use tracing::{error, info};
 use rpanel_grpc::docker::grpc::{Action, DockerReply, DockerRequest};
 use rpanel_grpc::docker::grpc::greeter_server::Greeter;
+use crate::feature::event::send_event;
 use crate::feature::grpc::handle::{handle_register_agent, handle_upload_status_message, set_agent_offline, set_agent_online};
 
 static CLIENT_MAP: LazyLock<RwLock<HashMap<String, Sender<Result<DockerReply, Status>>>>>
     = LazyLock::new(|| RwLock::new(HashMap::new()));
+
+pub async fn send_to_agent(agent_id: &str, msg: DockerReply) -> bool {
+    let map = CLIENT_MAP.read().await;
+    if let Some(tx) = map.get(agent_id) {
+        match tx.send(Ok(msg)).await {
+            Ok(_) => return true,
+            Err(e) => {
+                error!("Failed to send message to agent {}: {}", agent_id, e);
+            }
+        }
+    }
+    false
+}
 
 #[derive(Default)]
 pub struct DockerGreeter {}
@@ -53,7 +67,13 @@ pub async fn handle_message(mut inbound: Streaming<DockerRequest>, tx: Sender<Re
                 handle_register_agent(req).await;
             }
             Action::CreateContainer => {}
-            Action::PullImage => {}
+            Action::PullImage => {
+                 let wrapper = serde_json::json!({
+                     "agent_id": req.agent_id,
+                     "data": req.payload 
+                 });
+                 send_event("pull_progress", wrapper.to_string());
+            }
         }
     }
 

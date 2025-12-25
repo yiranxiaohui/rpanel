@@ -1,10 +1,18 @@
 use axum::Json;
+use axum::http::StatusCode;
+use axum::response::sse::{Event, KeepAlive, Sse};
+use futures::stream::Stream;
+use tokio_stream::StreamExt;
 use sea_orm::{ConnectionTrait, EntityTrait, FromQueryResult};
 use sea_orm::prelude::DateTime;
 use sea_orm::sea_query::{Expr, Query};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use migration::entity::{t_agent, t_agent_system_status};
+use rpanel_common::docker::PullImageRequest;
+use rpanel_grpc::docker::grpc::{Action, DockerReply};
 use crate::feature::database::get_database;
+use crate::feature::grpc::docker::send_to_agent;
+use crate::feature::event::get_event_bus;
 
 #[derive(Debug, Serialize, FromQueryResult)]
 pub struct AgentDetail {
@@ -66,4 +74,47 @@ pub async fn get_agent_list() -> Json<Vec<AgentDetail>> {
         .unwrap_or_default();
         
     Json(list)
+}
+
+#[derive(Deserialize)]
+pub struct PullImageBody {
+    pub agent_id: String,
+    pub image: String,
+}
+
+pub async fn trigger_pull_image(Json(payload): Json<PullImageBody>) -> StatusCode {
+    let req = PullImageRequest {
+        image: payload.image.clone(),
+    };
+    
+    let reply = DockerReply {
+        action: Action::PullImage as i32,
+        payload: serde_json::to_string(&req).unwrap(),
+    };
+
+    if send_to_agent(&payload.agent_id, reply).await {
+        StatusCode::OK
+    } else {
+        StatusCode::NOT_FOUND
+    }
+}
+
+pub async fn sse_handler() -> Sse<impl Stream<Item = Result<Event, axum::Error>>> {
+    let rx = get_event_bus().subscribe();
+    let stream = tokio_stream::wrappers::BroadcastStream::new(rx);
+
+    let stream = stream.map(|msg| {
+        match msg {
+            Ok(web_event) => {
+                Ok(Event::default()
+                    .event(web_event.event_type)
+                    .data(web_event.payload))
+            }
+            Err(_e) => {
+                 Ok(Event::default().comment("keep-alive"))
+            }
+        }
+    });
+
+    Sse::new(stream).keep_alive(KeepAlive::default())
 }

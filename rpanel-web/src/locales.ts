@@ -18,6 +18,14 @@ export const translations = {
     unknown: 'Unknown',
     never: 'Never',
     bytes: 'B',
+    actions: 'Actions',
+    pullImage: 'Pull Image',
+    imageName: 'Image Name (e.g., nginx:latest)',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    pulling: 'Triggered Pull...',
+    success: 'Success',
+    failed: 'Failed',
   },
   zh: {
     title: '监控面板',
@@ -36,5 +44,13 @@ export const translations = {
     unknown: '未知',
     never: '从未',
     bytes: '字节',
+    actions: '操作',
+    pullImage: '拉取镜像',
+    imageName: '镜像名称 (例如 nginx:latest)',
+    cancel: '取消',
+    confirm: '确认',
+    pulling: '已触发拉取...',
+    success: '成功',
+    failed: '失败',
   }
 };

@@ -8,7 +8,7 @@ pub mod image;
 
 pub static DOCKER: OnceLock<Docker> = OnceLock::new();
 
-fn get_docker() -> &'static Docker {
+pub fn get_docker() -> &'static Docker {
     let config = get_config();
     let url = &config.docker;
 

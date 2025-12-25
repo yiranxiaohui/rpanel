@@ -5,12 +5,11 @@ mod status;
 use std::time::Duration;
 use tokio::sync::{mpsc, RwLock};
 use tokio::sync::mpsc::Sender;
-use tokio::time::sleep;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
-use tonic::transport::{Channel, Error};
+use tonic::Streaming;
 use tracing::{error, info};
 use rpanel_common::agent::AgentRegisterRequest;
-use rpanel_grpc::docker::grpc::{Action, DockerRequest};
+use rpanel_grpc::docker::grpc::{Action, DockerReply, DockerRequest};
 use rpanel_grpc::docker::grpc::greeter_client::GreeterClient;
 use crate::config::get_config;
 use crate::feature::grpc::handle::handle_message;
@@ -24,23 +23,16 @@ pub struct Grpc {
 
 impl Grpc {
 
-    pub async fn new(mut client: GreeterClient<tonic::transport::Channel>, id: String) -> Grpc {
+    pub async fn create(mut client: GreeterClient<tonic::transport::Channel>, id: String) -> Result<(Grpc, Streaming<DockerReply>), Box<dyn std::error::Error + Send + Sync>> {
         let (tx, rx) = mpsc::channel(8);
         // 1. 把 rx 包装成 Stream
         let outbound = ReceiverStream::new(rx);
 
         // 2. 调用 exec（把 Stream 传进去）
-        let response = client.exec(outbound).await.expect("failed to execute grpc server");
+        let response = client.exec(outbound).await?;
 
         // 3. 得到服务端返回的 stream
-        let mut inbound = response.into_inner();
-
-        // 4. 接收服务端返回
-        tokio::spawn(async move {
-            while let Some(reply) = inbound.message().await.expect("recv connection error") {
-                handle_message(reply).await;
-            }
-        });
+        let inbound = response.into_inner();
 
         // 发送注册请求
         let register_info = AgentRegisterRequest::new("RPanel Agent".to_string());
@@ -50,7 +42,7 @@ impl Grpc {
             ..Default::default()
         };
         register_req.set_action(Action::RegisterAgent);
-        tx.send(register_req).await.unwrap();
+        tx.send(register_req).await?;
 
         let mut req = DockerRequest {
             agent_id: id.clone(),
@@ -58,10 +50,10 @@ impl Grpc {
             ..Default::default()
         };
         req.set_action(Action::UpLine);
-        tx.send(req).await.unwrap();
-        tokio::spawn(upload_status());
+        tx.send(req).await?;
+        
         let grpc = Grpc { client, tx};
-        grpc
+        Ok((grpc, inbound))
     }
 
     pub async fn send(&self, req: DockerRequest) {
@@ -77,21 +69,40 @@ impl Grpc {
 pub static GRPC: RwLock<Option<Grpc>> = RwLock::const_new(None);
 
 pub async fn init_grpc() {
+    tokio::spawn(upload_status());
+    
     loop {
         let config = get_config().clone();
         match GreeterClient::connect(config.controller).await {
             Ok(client) => {
-                let grpc = Grpc::new(client, config.id).await;
-                let mut lock = GRPC.write().await;
-                *lock = Some(grpc);
-                info!("gRPC initialized");
-                break;
+                match Grpc::create(client, config.id).await {
+                    Ok((grpc, mut inbound)) => {
+                         {
+                            let mut lock = GRPC.write().await;
+                            *lock = Some(grpc);
+                         }
+                         info!("gRPC initialized and connected");
+                         
+                         while let Ok(Some(reply)) = inbound.message().await {
+                             handle_message(reply).await;
+                         }
+                         error!("Connection lost");
+                    }
+                    Err(e) => {
+                        error!("Failed to initialize gRPC session: {}", e);
+                    }
+                }
             }
             Err(err) => {
                 error!("gRPC connect failed: {}, reconnecting...", err);
-                tokio::time::sleep(Duration::from_secs(10)).await;
             }
         }
+        
+        {
+            let mut lock = GRPC.write().await;
+            *lock = None;
+        }
+        tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }
 
