@@ -47,7 +47,7 @@ pub fn get_system_status() -> SystemStatus {
         cpu_usage,
         mem_used,
         mem_total,
-        disk_used: disk_used / 1024 / 1024 / 1024,
-        disk_total: disk_total / 1024 / 1024 / 1024,
+        disk_used: disk_used / 1024,
+        disk_total: disk_total / 1024,
     }
 }
