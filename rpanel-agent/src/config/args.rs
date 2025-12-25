@@ -14,11 +14,11 @@ pub struct Args {
     id: Option<String>,
 
     /// Docker服务地址，支持UnixSocket、Http、Https多种方式
-    #[arg(short, long, default_value = "/var/run/docker.sock")]
+    #[arg(short, long)]
     docker: Option<String>,
 
     /// Docker服务地址，支持UnixSocket、Http、Https多种方式
-    #[arg(short, long, default_value = "http://localhost:15666")]
+    #[arg(short, long)]
     controller: Option<String>,
 
     /// 指定配置文件，如未填写，则会生成默认的配置文件
