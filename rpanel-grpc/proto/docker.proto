@@ -21,4 +21,5 @@ enum Action {
   UpLine = 1;
   CreateContainer = 2;
   PullImage = 3;
+  RegisterAgent = 4;
 }

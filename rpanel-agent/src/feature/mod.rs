@@ -1,4 +1,3 @@
-use tracing::error;
 use crate::feature::grpc::init_grpc;
 
 mod docker;

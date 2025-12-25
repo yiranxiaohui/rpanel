@@ -1,19 +1,26 @@
 import { useEffect, useState } from 'react';
 import './App.css';
+import { translations, type Lang } from './locales';
 
-interface SystemStatus {
+interface Agent {
   id: number;
-  agent_id: string;
-  cpu_usage: number;
-  mem_used: number;
-  mem_total: number;
-  disk_used: number;
-  disk_total: number;
-  create_time: string;
-  update_time: string;
+  uuid: string;
+  name: string;
+  host_name: string | null;
+  ip_address: string | null;
+  os_info: string | null;
+  version: string | null;
+  status: number; // 0: offline, 1: online
+  cpu_usage: number | null;
+  mem_used: number | null;
+  mem_total: number | null;
+  disk_used: number | null;
+  disk_total: number | null;
+  last_update: string | null;
 }
 
-function formatBytes(bytes: number, decimals = 2) {
+function formatBytes(bytes: number | null | undefined, decimals = 2) {
+  if (bytes === null || bytes === undefined) return '-';
   if (bytes === 0) return '0 B';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
@@ -22,14 +29,18 @@ function formatBytes(bytes: number, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-function formatPercent(value: number) {
+function formatPercent(value: number | null | undefined) {
+  if (value === null || value === undefined) return '-';
   return `${value.toFixed(1)}%`;
 }
 
 function App() {
-  const [agents, setAgents] = useState<SystemStatus[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [lang, setLang] = useState<Lang>('zh');
+
+  const t = translations[lang];
 
   const fetchAgents = async () => {
     try {
@@ -38,8 +49,13 @@ function App() {
         throw new Error(`Error fetching agents: ${response.statusText}`);
       }
       const data = await response.json();
-      // Sort by update_time desc
-      data.sort((a: SystemStatus, b: SystemStatus) => new Date(b.update_time).getTime() - new Date(a.update_time).getTime());
+      // Sort by status (online first) then last_update desc
+      data.sort((a: Agent, b: Agent) => {
+        if (b.status !== a.status) return b.status - a.status;
+        const timeA = a.last_update ? new Date(a.last_update).getTime() : 0;
+        const timeB = b.last_update ? new Date(b.last_update).getTime() : 0;
+        return timeB - timeA;
+      });
       setAgents(data);
       setError(null);
     } catch (err) {
@@ -56,45 +72,72 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const toggleLang = () => {
+    setLang(l => l === 'en' ? 'zh' : 'en');
+  };
+
   return (
     <div className="dashboard-container">
       <header className="header">
-        <h1>Agent Monitor</h1>
+        <h1>{t.title}</h1>
+        <button className="lang-btn" onClick={toggleLang}>
+          {lang === 'en' ? '中文' : 'English'}
+        </button>
       </header>
 
-      {loading && agents.length === 0 && <p>Loading agents...</p>}
+      {loading && agents.length === 0 && <p>{t.loading}</p>}
       
-      {error && <div className="error-message">Error: {error}</div>}
+      {error && <div className="error-message">{t.error}{error}</div>}
 
       <div className="agent-grid">
         {agents.map((agent) => {
-          const memPercent = (agent.mem_used / agent.mem_total) * 100;
-          const diskPercent = (agent.disk_used / agent.disk_total) * 100;
-          const isOnline = (Date.now() - new Date(agent.update_time).getTime()) < 30000; // < 30s considered online
+          const memUsed = agent.mem_used || 0;
+          const memTotal = agent.mem_total || 1; // avoid division by zero
+          const diskUsed = agent.disk_used || 0;
+          const diskTotal = agent.disk_total || 1;
+
+          const memPercent = (memUsed / memTotal) * 100;
+          const diskPercent = (diskUsed / diskTotal) * 100;
+          const isOnline = agent.status === 1;
 
           return (
             <div key={agent.id} className="agent-card" style={{ borderColor: isOnline ? '#333' : '#551111' }}>
               <div className="agent-header">
-                <span className="agent-name">{agent.agent_id}</span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span className="agent-name">{agent.name}</span>
+                    <span className="agent-uuid">{agent.uuid}</span>
+                </div>
                 <span className={`status-badge`} style={{ 
                   backgroundColor: isOnline ? '#1a3c1a' : '#3c1a1a', 
                   color: isOnline ? '#4cc74c' : '#c74c4c',
                   borderColor: isOnline ? '#2d5a2d' : '#5a2d2d'
                 }}>
-                  {isOnline ? 'Online' : 'Offline'}
+                  {isOnline ? t.online : t.offline}
                 </span>
+              </div>
+
+              <div className="agent-info">
+                 <div className="info-row" title="IP Address">
+                    <span className="label">{t.ip}:</span> {agent.ip_address || t.unknown}
+                 </div>
+                 <div className="info-row" title="OS Info">
+                    <span className="label">{t.os}:</span> {agent.os_info || t.unknown}
+                 </div>
+                 <div className="info-row" title="Version">
+                    <span className="label">{t.version}:</span> {agent.version || '-'}
+                 </div>
               </div>
 
               {/* CPU */}
               <div className="stat-group">
                 <div className="stat-row">
-                  <span>CPU Usage</span>
+                  <span>{t.cpu}</span>
                   <span className="stat-value">{formatPercent(agent.cpu_usage)}</span>
                 </div>
                 <div className="progress-bar-bg">
                   <div 
                     className="progress-bar-fill" 
-                    style={{ width: `${Math.min(agent.cpu_usage, 100)}%` }}
+                    style={{ width: `${Math.min(agent.cpu_usage || 0, 100)}%` }}
                   ></div>
                 </div>
               </div>
@@ -102,7 +145,7 @@ function App() {
               {/* Memory */}
               <div className="stat-group">
                 <div className="stat-row">
-                  <span>Memory</span>
+                  <span>{t.memory}</span>
                   <span className="stat-value">{formatBytes(agent.mem_used)} / {formatBytes(agent.mem_total)}</span>
                 </div>
                 <div className="progress-bar-bg mem-bar">
@@ -116,7 +159,7 @@ function App() {
               {/* Disk */}
               <div className="stat-group">
                 <div className="stat-row">
-                  <span>Disk</span>
+                  <span>{t.disk}</span>
                   <span className="stat-value">{formatBytes(agent.disk_used)} / {formatBytes(agent.disk_total)}</span>
                 </div>
                 <div className="progress-bar-bg disk-bar">
@@ -128,7 +171,7 @@ function App() {
               </div>
 
               <div className="timestamp">
-                Last updated: {new Date(agent.update_time).toLocaleString()}
+                {t.lastUpdated}: {agent.last_update ? new Date(agent.last_update).toLocaleString() : t.never}
               </div>
             </div>
           );
@@ -136,7 +179,7 @@ function App() {
       </div>
       
       {!loading && agents.length === 0 && !error && (
-        <p style={{ textAlign: 'center', color: '#666' }}>No agents connected yet.</p>
+        <p style={{ textAlign: 'center', color: '#666' }}>{t.noAgents}</p>
       )}
     </div>
   );

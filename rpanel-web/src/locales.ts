@@ -1,0 +1,40 @@
+export type Lang = 'en' | 'zh';
+
+export const translations = {
+  en: {
+    title: 'Agent Monitor',
+    loading: 'Loading agents...',
+    error: 'Error: ',
+    online: 'Online',
+    offline: 'Offline',
+    cpu: 'CPU Usage',
+    memory: 'Memory',
+    disk: 'Disk',
+    ip: 'IP',
+    os: 'OS',
+    version: 'Ver',
+    noAgents: 'No agents connected yet.',
+    lastUpdated: 'Last updated',
+    unknown: 'Unknown',
+    never: 'Never',
+    bytes: 'B',
+  },
+  zh: {
+    title: '监控面板',
+    loading: '正在加载...',
+    error: '错误：',
+    online: '在线',
+    offline: '离线',
+    cpu: 'CPU 使用率',
+    memory: '内存',
+    disk: '硬盘',
+    ip: 'IP地址',
+    os: '系统',
+    version: '版本',
+    noAgents: '暂无 Agent 连接',
+    lastUpdated: '最后更新',
+    unknown: '未知',
+    never: '从未',
+    bytes: '字节',
+  }
+};
