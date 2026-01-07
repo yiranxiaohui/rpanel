@@ -1,6 +1,5 @@
 pub mod args;
 
-use std::io::Error;
 use std::fs;
 use std::path::Path;
 use std::sync::OnceLock;

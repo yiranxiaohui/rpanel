@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "migration",
-    "rpanel-agent",
-    "rpanel-controller",
-    "rpanel-grpc"
+    "agent",
+    "controller",
+    "common",
+    "grpc"
 ]
 resolver = "3"

@@ -14,13 +14,13 @@ RPanel 是一款基于 Rust 编写的高性能 Docker 集群管理工具。它�
 
 系统由两个核心组件组成：
 
-*   **rpanel-controller (服务端)**
+*   **controller (服务端)**
     *   提供 Web 访问接口 (Port: 5666)
     *   提供 gRPC 服务供 Agent 连接 (Port: 15666)
     *   使用 SQLite 存储数据
     *   包含前端静态资源服务
 
-*   **rpanel-agent (客户端)**
+*   **agent (客户端)**
     *   部署在目标 Docker 主机上
     *   采集系统监控数据 (CPU/Mem/Disk)
     *   与本地 Docker Daemon 通信 (默认 localhost:2375)
@@ -34,7 +34,7 @@ RPanel 是一款基于 Rust 编写的高性能 Docker 集群管理工具。它�
 
 ```bash
 # 编译前端
-cd rpanel-web
+cd web
 bun install
 bun run build
 cd ..
@@ -53,7 +53,7 @@ cargo build --release
 
 ```bash
 # 首次运行会自动生成配置文件 config/controller.toml
-./target/release/rpanel-controller
+./target/release/controller
 ```
 
 *   **Web 面板**: http://127.0.0.1:5666
@@ -65,7 +65,7 @@ cargo build --release
 
 ```bash
 # 首次运行会自动生成配置文件 config/agent.toml
-./target/release/rpanel-agent
+./target/release/agent
 ```
 
 ## ⚙️ 配置说明
@@ -104,14 +104,14 @@ controller = "http://localhost:15666"
 
 1.  **启动前端开发服务器**:
     ```bash
-    cd rpanel-web
+    cd web
     bun run dev
     ```
 
 2.  **启动后端**:
     ```bash
-    cargo run -p rpanel-controller
-    cargo run -p rpanel-agent
+    cargo run -p controller
+    cargo run -p agent
     ```
 
 ## 📄 License

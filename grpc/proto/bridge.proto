@@ -1,8 +1,37 @@
 syntax = "proto3";
-package docker;
+
+package bridge;
+
+service Bridge {
+  rpc Connect(stream Frame) returns (stream Frame);
+}
 
 service Greeter {
   rpc Exec (stream DockerRequest) returns (stream DockerReply);
+}
+
+message Frame {
+  string id = 1;          // 关联请求与响应
+  oneof body {
+    CallRequest call = 2;
+    CallResponse resp = 3;
+    Heartbeat hb = 4;
+  }
+}
+
+message CallRequest {
+  string method = 1;
+  bytes  payload = 2;
+}
+
+message CallResponse {
+  int32  code = 1;        // 0 ok
+  string message = 2;
+  bytes  payload = 3;
+}
+
+message Heartbeat {
+  int64 ts = 1;
 }
 
 message DockerRequest {

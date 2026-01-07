@@ -32,7 +32,7 @@ pub async fn handle_message(reply: DockerReply) {
             tokio::spawn(async move {
                 match get_container_list().await {
                     Ok(containers) => {
-                         // Convert to rpanel-common struct
+                         // Convert to common struct
                          let infos: Vec<ContainerInfo> = containers.into_iter().map(|c| {
                              ContainerInfo {
                                  id: c.id.unwrap_or_default(),
