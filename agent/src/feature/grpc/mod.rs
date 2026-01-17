@@ -8,56 +8,34 @@ use tokio::sync::mpsc::Sender;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::Streaming;
 use tracing::{error, info};
-use rpanel_common::agent::AgentRegisterRequest;
-use rpanel_grpc::docker::grpc::{Action, DockerReply, DockerRequest};
-use rpanel_grpc::docker::grpc::greeter_client::GreeterClient;
+use grpc::bridge::grpc::bridge_service_client::BridgeServiceClient;
+use grpc::bridge::grpc::Frame;
 use crate::config::get_config;
 use crate::feature::grpc::handle::handle_message;
-use crate::feature::grpc::status::upload_status;
 
 #[derive(Debug, Clone)]
 pub struct Grpc {
-    pub client: GreeterClient<tonic::transport::Channel>,
-    pub tx: Sender<DockerRequest>,
+    pub client: BridgeServiceClient<tonic::transport::Channel>,
+    pub tx: Sender<Frame>,
 }
 
 impl Grpc {
 
-    pub async fn create(mut client: GreeterClient<tonic::transport::Channel>, id: String) -> Result<(Grpc, Streaming<DockerReply>), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn create(mut client: BridgeServiceClient<tonic::transport::Channel>, id: String) -> Result<(Grpc, Streaming<Frame>), Box<dyn std::error::Error + Send + Sync>> {
         let (tx, rx) = mpsc::channel(8);
         // 1. 把 rx 包装成 Stream
         let outbound = ReceiverStream::new(rx);
-
         // 2. 调用 exec（把 Stream 传进去）
-        let response = client.exec(outbound).await?;
-
+        let response = client.exchange(outbound).await?;
         // 3. 得到服务端返回的 stream
         let inbound = response.into_inner();
-
         // 发送注册请求
-        let register_info = AgentRegisterRequest::new("RPanel Agent".to_string());
-        let mut register_req = DockerRequest {
-            agent_id: id.clone(),
-            payload: serde_json::to_string(&register_info).unwrap(),
-            ..Default::default()
-        };
-        register_req.set_action(Action::RegisterAgent);
-        tx.send(register_req).await?;
-
-        let mut req = DockerRequest {
-            agent_id: id.clone(),
-            payload: "".to_string(),
-            ..Default::default()
-        };
-        req.set_action(Action::UpLine);
-        tx.send(req).await?;
-        
         let grpc = Grpc { client, tx};
         Ok((grpc, inbound))
     }
 
-    pub async fn send(&self, req: DockerRequest) {
-        match self.tx.send(req).await {
+    pub async fn send(&self, frame: Frame) {
+        match self.tx.send(frame).await {
             Ok(_) => {}
             Err(err) => {
                 error!("send error: {}", err);
@@ -69,11 +47,10 @@ impl Grpc {
 pub static GRPC: RwLock<Option<Grpc>> = RwLock::const_new(None);
 
 pub async fn init_grpc() {
-    tokio::spawn(upload_status());
-    
+    // tokio::spawn(upload_status());
     loop {
         let config = get_config().clone();
-        match GreeterClient::connect(config.controller).await {
+        match BridgeServiceClient::connect(config.controller).await {
             Ok(client) => {
                 match Grpc::create(client, config.id).await {
                     Ok((grpc, mut inbound)) => {
@@ -82,9 +59,8 @@ pub async fn init_grpc() {
                             *lock = Some(grpc);
                          }
                          info!("gRPC initialized and connected");
-                         
-                         while let Ok(Some(reply)) = inbound.message().await {
-                             handle_message(reply).await;
+                         while let Ok(Some(frame)) = inbound.message().await {
+                             handle_message(frame).await;
                          }
                          error!("Connection lost");
                     }
@@ -97,7 +73,6 @@ pub async fn init_grpc() {
                 error!("gRPC connect failed: {}, reconnecting...", err);
             }
         }
-        
         {
             let mut lock = GRPC.write().await;
             *lock = None;

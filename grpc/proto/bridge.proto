@@ -2,20 +2,18 @@ syntax = "proto3";
 
 package bridge;
 
-service Bridge {
-  rpc Connect(stream Frame) returns (stream Frame);
+service BridgeService {
+  rpc Exchange(stream Frame) returns (stream Frame);
 }
 
-service Greeter {
-  rpc Exec (stream DockerRequest) returns (stream DockerReply);
-}
 
 message Frame {
-  string id = 1;          // 关联请求与响应
+  string request_id = 1;
+  string agent_id = 2;
   oneof body {
-    CallRequest call = 2;
-    CallResponse resp = 3;
-    Heartbeat hb = 4;
+    CallRequest call = 3;
+    CallResponse resp = 4;
+    Heartbeat hb = 5;
   }
 }
 
@@ -25,37 +23,11 @@ message CallRequest {
 }
 
 message CallResponse {
-  int32  code = 1;        // 0 ok
+  int32  code = 1;
   string message = 2;
   bytes  payload = 3;
 }
 
 message Heartbeat {
-  int64 ts = 1;
-}
-
-message DockerRequest {
-  Action action = 1;
-  string agent_id = 2;
-  string payload = 3;
-}
-
-message DockerReply {
-  Action action = 1;
-  string payload = 2;
-}
-
-enum Action {
-  UploadStatus = 0;
-  UpLine = 1;
-  CreateContainer = 2;
-  PullImage = 3;
-  RegisterAgent = 4;
-  ListContainers = 5;
-  ListImages = 6;
-  StartContainer = 7;
-  StopContainer = 8;
-  RemoveContainer = 9;
-  RemoveImage = 10;
-  RunContainer = 11;
+  int64 ts = 1; // unix timestamp in milliseconds
 }

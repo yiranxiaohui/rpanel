@@ -5,5 +5,5 @@ members = [
     "controller",
     "common",
     "grpc"
-]
+, "macros"]
 resolver = "3"

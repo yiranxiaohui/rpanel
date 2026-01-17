@@ -1,25 +1,19 @@
-use rpanel_grpc::docker::grpc::DockerReply;
-use tokio::sync::mpsc::Sender;
+mod bridge;
+mod handle;
+
 use tonic::transport::Server;
 use tracing::info;
-use rpanel_grpc::docker::grpc::greeter_server::GreeterServer;
+use grpc::bridge::grpc::bridge_service_server::BridgeServiceServer;
 use crate::config::get_config;
-use crate::feature::grpc::docker::DockerGreeter;
-
-pub struct Grpc {
-    pub tx: Sender<DockerReply>
-}
-
-pub mod docker;
-mod handle;
+use crate::feature::grpc::bridge::BridgeGreeter;
 
 pub async fn init_grpc() {
     let config = get_config();
     let addr = format!("127.0.0.1:{}", config.port).parse().expect("Failed to parse socket address");
-    let greeter = DockerGreeter::default();
+    let greeter = BridgeGreeter::default();
     info!("gRPC server listening on {}", addr);
     Server::builder()
-        .add_service(GreeterServer::new(greeter))
+        .add_service(BridgeServiceServer::new(greeter))
         .serve(addr)
         .await.expect("gRPC server error");
 }
